@@ -48,6 +48,27 @@ def get_telegram_updates(offset=None):
         pass
     return []
 
+def send_telegram_photo(photo_path: str, caption: str = "") -> bool:
+    """Send an image / chart screenshot to the Telegram chat."""
+    if not BOT_TOKEN or not CHAT_ID:
+        print("[ERROR] Missing Telegram Token or Chat ID")
+        return False
+    if not os.path.exists(photo_path):
+        print(f"[ERROR] Photo path not found: {photo_path}")
+        return False
+        
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    try:
+        with open(photo_path, "rb") as f:
+            files = {"photo": f}
+            data = {"chat_id": CHAT_ID, "caption": caption, "parse_mode": "HTML"}
+            res = requests.post(url, files=files, data=data, timeout=15)
+            return res.json().get("ok", False)
+    except Exception as e:
+        print(f"[ERROR] Failed to send photo: {e}")
+        return False
+
+
 # Specific Notification Handlers matching user strategy:
 
 def notify_bos(symbol: str, timeframe: str, direction: str, broken_level: float, current_price: float):

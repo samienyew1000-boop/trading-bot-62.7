@@ -10,8 +10,10 @@ from smc_engine import (
     detect_valid_order_blocks,
     OrderBlock
 )
+from chart_generator import generate_candlestick_chart
 from telegram_notifier import (
     send_telegram_message,
+    send_telegram_photo,
     get_telegram_updates,
     notify_bos,
     notify_direction_change,
@@ -114,11 +116,17 @@ def analyze_symbol(tracker: SymbolTracker):
                 tracker.active_htf_ob = ob
                 tracker.state = "OB_MITIGATED"
                 notify_ob_mitigated(symbol, config.HTF_NAME, "BEARISH", ob.high, ob.low, current_price)
+                chart_file = generate_candlestick_chart(df_htf, symbol, config.HTF_NAME, ob=ob, output_path=f"{symbol}_htf_ob.png")
+                if chart_file:
+                    send_telegram_photo(chart_file, caption=f"📸 <b>{symbol} {config.HTF_NAME} Bearish OB Zone</b>")
                 break
             elif ob.ob_type == "BULLISH" and latest_htf['low'] <= ob.high and latest_htf['high'] >= ob.low:
                 tracker.active_htf_ob = ob
                 tracker.state = "OB_MITIGATED"
                 notify_ob_mitigated(symbol, config.HTF_NAME, "BULLISH", ob.high, ob.low, current_price)
+                chart_file = generate_candlestick_chart(df_htf, symbol, config.HTF_NAME, ob=ob, output_path=f"{symbol}_htf_ob.png")
+                if chart_file:
+                    send_telegram_photo(chart_file, caption=f"📸 <b>{symbol} {config.HTF_NAME} Bullish OB Zone</b>")
                 break
 
     # 4. Lower Timeframe (5M) Monitoring if OB is Mitigated
@@ -165,6 +173,9 @@ def analyze_symbol(tracker: SymbolTracker):
                         tp = ltf_price - (risk * 3.0)  # 1:3 RR
                         rr = 3.0
                         notify_entry(symbol, "SELL", ltf_price, sl, tp, rr)
+                        chart_file = generate_candlestick_chart(df_ltf, symbol, config.LTF_NAME, ob=tracker.active_ltf_ob, sl=sl, tp=tp, output_path=f"{symbol}_sell_entry.png")
+                        if chart_file:
+                            send_telegram_photo(chart_file, caption=f"🎯 <b>{symbol} SELL Entry Chart</b>\nSL: <code>{sl:.5f}</code> | TP: <code>{tp:.5f}</code>")
                         tracker.state = "ENTRY_TRIGGERED"
 
                 elif tracker.direction == "BULLISH":
@@ -176,6 +187,9 @@ def analyze_symbol(tracker: SymbolTracker):
                         tp = ltf_price + (risk * 3.0)  # 1:3 RR
                         rr = 3.0
                         notify_entry(symbol, "BUY", ltf_price, sl, tp, rr)
+                        chart_file = generate_candlestick_chart(df_ltf, symbol, config.LTF_NAME, ob=tracker.active_ltf_ob, sl=sl, tp=tp, output_path=f"{symbol}_buy_entry.png")
+                        if chart_file:
+                            send_telegram_photo(chart_file, caption=f"🎯 <b>{symbol} BUY Entry Chart</b>\nSL: <code>{sl:.5f}</code> | TP: <code>{tp:.5f}</code>")
                         tracker.state = "ENTRY_TRIGGERED"
 
     tracker.last_closed_htf_time = closed_htf['time']
