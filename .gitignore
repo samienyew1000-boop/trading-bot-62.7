@@ -1,0 +1,9 @@
+# Environment variables and secrets
+.env
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local logs
+*.log
