@@ -30,10 +30,36 @@ class GoldBotState:
         self.in_position = False
         self.position_ticket = None
         self.position_type = None
-        self.lot_size = config.DEFAULT_LOT_SIZE
+        self.risk_mode = "PERCENT"  # "PERCENT" or "FIXED"
+        self.risk_percent = 1.0     # 1.0%, 2.0%, 3.0%, 5.0%
+        self.fixed_lot = 0.01       # 0.01, 0.02, 0.05
         self.auto_trade_enabled = True
 
 state = GoldBotState()
+
+def calculate_order_lot(sl_distance: float) -> float:
+    """Calculate the lot size based on dynamic risk percent or fixed lot."""
+    if state.risk_mode == "FIXED":
+        return state.fixed_lot
+        
+    acc = mt5.account_info()
+    equity = acc.equity if acc else 500.0
+    risk_dollars = equity * (state.risk_percent / 100.0)
+    
+    sym_info = mt5.symbol_info(config.SYMBOL)
+    vol_min = sym_info.volume_min if sym_info else 0.01
+    vol_max = sym_info.volume_max if sym_info else 100.0
+    vol_step = sym_info.volume_step if sym_info else 0.01
+    contract_size = sym_info.trade_contract_size if sym_info else 100.0
+    
+    if sl_distance <= 0:
+        return vol_min
+
+    raw_lot = risk_dollars / (sl_distance * contract_size)
+    steps = round(raw_lot / vol_step)
+    lot = steps * vol_step
+    lot = max(vol_min, min(vol_max, lot))
+    return round(lot, 2)
 
 def get_filling_mode(symbol_info):
     """Determine the valid execution filling mode for the broker."""
@@ -195,9 +221,10 @@ def analyze_and_trade():
             if 1.5 <= risk <= 30.0:
                 tp_p = entry_p + (risk * config.RISK_REWARD_RATIO)
                 state.last_candle_time = closed_candle['time']
+                order_lot = calculate_order_lot(risk)
 
-                print(f"[TRIGGER] BUY Signal on XAUUSD! Entry: {entry_p}, SL: {sl_p}, TP: {tp_p}")
-                res = open_market_trade("BUY", state.lot_size, sl_p, tp_p)
+                print(f"[TRIGGER] BUY Signal on XAUUSD! Entry: {entry_p}, SL: {sl_p}, TP: {tp_p}, Lot: {order_lot}")
+                res = open_market_trade("BUY", order_lot, sl_p, tp_p)
                 ticket_str = str(res.order) if res else ("Alert Mode (Paused)" if not state.auto_trade_enabled else "Simulation")
 
                 chart_path = generate_candlestick_chart(df, config.SYMBOL, config.TIMEFRAME_NAME, sl=sl_p, tp=tp_p, output_path="gold_trade.png")
@@ -205,7 +232,7 @@ def analyze_and_trade():
                     f"🚀 <b>XAUUSD BUY ORDER TRIGGERED!</b>\n\n"
                     f"🎫 <b>Ticket:</b> <code>{ticket_str}</code>\n"
                     f"📊 <b>Symbol:</b> <code>{config.SYMBOL}</code>\n"
-                    f"📦 <b>Lot Size:</b> <code>{state.lot_size}</code>\n"
+                    f"📦 <b>Lot Size:</b> <code>{order_lot}</code>\n"
                     f"📍 <b>Entry:</b> <code>{entry_p:.3f}</code>\n"
                     f"🛑 <b>Stop Loss:</b> <code>{sl_p:.3f}</code>\n"
                     f"🎯 <b>Take Profit (1:2):</b> <code>{tp_p:.3f}</code>\n"
@@ -230,9 +257,10 @@ def analyze_and_trade():
             if 1.5 <= risk <= 30.0:
                 tp_p = entry_p - (risk * config.RISK_REWARD_RATIO)
                 state.last_candle_time = closed_candle['time']
+                order_lot = calculate_order_lot(risk)
 
-                print(f"[TRIGGER] SELL Signal on XAUUSD! Entry: {entry_p}, SL: {sl_p}, TP: {tp_p}")
-                res = open_market_trade("SELL", state.lot_size, sl_p, tp_p)
+                print(f"[TRIGGER] SELL Signal on XAUUSD! Entry: {entry_p}, SL: {sl_p}, TP: {tp_p}, Lot: {order_lot}")
+                res = open_market_trade("SELL", order_lot, sl_p, tp_p)
                 ticket_str = str(res.order) if res else ("Alert Mode (Paused)" if not state.auto_trade_enabled else "Simulation")
 
                 chart_path = generate_candlestick_chart(df, config.SYMBOL, config.TIMEFRAME_NAME, sl=sl_p, tp=tp_p, output_path="gold_trade.png")
@@ -240,7 +268,7 @@ def analyze_and_trade():
                     f"🔻 <b>XAUUSD SELL ORDER TRIGGERED!</b>\n\n"
                     f"🎫 <b>Ticket:</b> <code>{ticket_str}</code>\n"
                     f"📊 <b>Symbol:</b> <code>{config.SYMBOL}</code>\n"
-                    f"📦 <b>Lot Size:</b> <code>{state.lot_size}</code>\n"
+                    f"📦 <b>Lot Size:</b> <code>{order_lot}</code>\n"
                     f"📍 <b>Entry:</b> <code>{entry_p:.3f}</code>\n"
                     f"🛑 <b>Stop Loss:</b> <code>{sl_p:.3f}</code>\n"
                     f"🎯 <b>Take Profit (1:2):</b> <code>{tp_p:.3f}</code>\n"
@@ -267,12 +295,13 @@ def get_admin_dashboard_markup():
     pos_str = f"<b>{pos.volume} lot</b> ({pos.profit:+.2f}$)" if pos else "None"
 
     trade_status = "🟢 Active (Auto-Execute)" if state.auto_trade_enabled else "⏸️ Paused (Alerts Only)"
+    risk_disp = f"Dynamic {state.risk_percent}%" if state.risk_mode == "PERCENT" else f"Fixed {state.fixed_lot} Lot"
 
     text = (
         f"👑 <b>XAUUSD BOT ADMIN DASHBOARD</b>\n\n"
         f"💵 <b>Current Gold Price:</b> <code>{curr_p:.3f}</code>\n"
         f"📈 <b>1H Trend:</b> <b>{state.current_trend}</b>\n"
-        f"📦 <b>Lot Size:</b> <code>{state.lot_size} Lot</code>\n"
+        f"🛡 <b>Risk Setting:</b> <code>{risk_disp}</code>\n"
         f"⚡ <b>Auto-Trading:</b> {trade_status}\n"
         f"🎫 <b>Open Position:</b> {pos_str}\n"
         f"💼 <b>Balance:</b> <code>{acc.balance:.2f} USD</code>\n"
@@ -283,7 +312,7 @@ def get_admin_dashboard_markup():
     buttons = [
         [
             {"text": "📊 Past Trades (Win/Loss)", "callback_data": "menu_trades"},
-            {"text": "⚙️ Set Lot Size / Risk", "callback_data": "menu_risk"}
+            {"text": "⚙️ Set Risk % / Lot Size", "callback_data": "menu_risk"}
         ],
         [
             {"text": "⏸️ Pause Trading" if state.auto_trade_enabled else "▶️ Resume Trading", "callback_data": "toggle_autotrade"},
@@ -329,25 +358,44 @@ def get_trades_markup():
     return text, buttons
 
 def get_risk_markup():
-    """Build the lot size / risk setting page."""
+    """Build the lot size & risk percent setting page."""
+    acc = mt5.account_info()
+    eq = acc.equity if acc else 500.0
+    
+    if state.risk_mode == "PERCENT":
+        current_setting = f"<b>Dynamic {state.risk_percent}% Risk</b> per trade"
+        risk_cash = eq * (state.risk_percent / 100.0)
+        est_lot = calculate_order_lot(18.24)
+        detail = f"• አሁን ባለው Equity (${eq:.2f})፦ <b>~${risk_cash:.2f} USD</b> ስጋት\n• ለአማካይ SL (180 pips) የሚሰላው Lot፦ <b>{est_lot} Lot</b>"
+    else:
+        current_setting = f"<b>Fixed {state.fixed_lot} Lot</b>"
+        detail = f"• በቋሚነት ለእያንዳንዱ ትሬድ <b>{state.fixed_lot} Lot</b> ይከፍታል"
+
     text = (
-        f"⚙️ <b>SET LOT SIZE & RISK LEVEL</b>\n\n"
-        f"የአሁኑ የተመረጠው መጠን፦ <b>{state.lot_size} Lot</b>\n\n"
-        f"💡 <i>የሚፈልጉትን የ Lot መጠን ከስር ይምረጡ፦</i>\n"
-        f"• <b>0.01 Lot</b>: በጣም ደህንነቱ የተጠበቀ (ለ $500 balance የተመከረ)\n"
-        f"• <b>0.02 Lot</b>: መካከለኛ እድገት\n"
-        f"• <b>0.03 Lot</b>: ፈጣን እድገት\n"
-        f"• <b>0.05 Lot</b>: ከፍተኛ እድገት (ለትልቅ Balance)"
+        f"⚙️ <b>SET RISK LEVEL & POSITION SIZING</b>\n\n"
+        f"📊 <b>የአሁኑ አቀማመጥ፦</b> {current_setting}\n"
+        f"{detail}\n\n"
+        f"<b>🎯 1. በአካውንት ፐርሰንት (Dynamic Risk %)፦</b>\n"
+        f"<i>(አካውንትዎ ሲያድግ የሎት መጠኑ በራሱ አብሮ ያድጋል)</i>\n"
+        f"• <b>1% Risk</b>: በጣም ደህንነቱ የተጠበቀ (Recommended)\n"
+        f"• <b>2% Risk</b>: መደበኛ እና የተመጣጠነ እድገት\n"
+        f"• <b>3% Risk</b>: ፈጣን እድገት\n"
+        f"• <b>5% Risk</b>: ከፍተኛ እድገት\n\n"
+        f"<b>📦 2. በቋሚ የ Lot መጠን (Fixed Lot)፦</b>\n"
     )
 
     buttons = [
         [
-            {"text": "✅ 0.01 Lot (Safe)" if state.lot_size == 0.01 else "0.01 Lot", "callback_data": "set_lot_0.01"},
-            {"text": "✅ 0.02 Lot" if state.lot_size == 0.02 else "0.02 Lot", "callback_data": "set_lot_0.02"}
+            {"text": "✅ 1% Risk (Safe)" if (state.risk_mode == "PERCENT" and state.risk_percent == 1.0) else "1% Risk (Safe)", "callback_data": "set_risk_1"},
+            {"text": "✅ 2% Risk" if (state.risk_mode == "PERCENT" and state.risk_percent == 2.0) else "2% Risk", "callback_data": "set_risk_2"}
         ],
         [
-            {"text": "✅ 0.03 Lot" if state.lot_size == 0.03 else "0.03 Lot", "callback_data": "set_lot_0.03"},
-            {"text": "✅ 0.05 Lot" if state.lot_size == 0.05 else "0.05 Lot", "callback_data": "set_lot_0.05"}
+            {"text": "✅ 3% Risk" if (state.risk_mode == "PERCENT" and state.risk_percent == 3.0) else "3% Risk", "callback_data": "set_risk_3"},
+            {"text": "✅ 5% Risk" if (state.risk_mode == "PERCENT" and state.risk_percent == 5.0) else "5% Risk", "callback_data": "set_risk_5"}
+        ],
+        [
+            {"text": "✅ 0.01 Fixed" if (state.risk_mode == "FIXED" and state.fixed_lot == 0.01) else "0.01 Fixed", "callback_data": "set_fixed_0.01"},
+            {"text": "✅ 0.02 Fixed" if (state.risk_mode == "FIXED" and state.fixed_lot == 0.02) else "0.02 Fixed", "callback_data": "set_fixed_0.02"}
         ],
         [
             {"text": "🔙 Back to Admin Menu", "callback_data": "menu_main"}
@@ -405,12 +453,21 @@ def handle_telegram_interactive():
                         edit_telegram_message(msg_id, txt, btn)
                         answer_callback_query(cq_id)
 
-                    elif data.startswith("set_lot_"):
-                        new_lot = float(data.replace("set_lot_", ""))
-                        state.lot_size = new_lot
+                    elif data.startswith("set_risk_"):
+                        val = float(data.replace("set_risk_", ""))
+                        state.risk_mode = "PERCENT"
+                        state.risk_percent = val
                         txt, btn = get_risk_markup()
                         edit_telegram_message(msg_id, txt, btn)
-                        answer_callback_query(cq_id, f"Lot size updated to {new_lot} Lot!")
+                        answer_callback_query(cq_id, f"Risk set to {val}% per trade!")
+
+                    elif data.startswith("set_fixed_"):
+                        val = float(data.replace("set_fixed_", ""))
+                        state.risk_mode = "FIXED"
+                        state.fixed_lot = val
+                        txt, btn = get_risk_markup()
+                        edit_telegram_message(msg_id, txt, btn)
+                        answer_callback_query(cq_id, f"Fixed Lot set to {val} Lot!")
 
                     elif data == "toggle_autotrade":
                         state.auto_trade_enabled = not state.auto_trade_enabled
@@ -422,6 +479,56 @@ def handle_telegram_interactive():
                     elif data == "menu_account":
                         txt, btn = get_account_markup()
                         edit_telegram_message(msg_id, txt, btn)
+                        answer_callback_query(cq_id)
+
+                # 2. Handle Text Commands
+                elif "message" in upd:
+                    msg = upd["message"]
+                    text = msg.get("text", "").strip()
+                    chat_id = str(msg.get("chat", {}).get("id", ""))
+
+                    if chat_id != str(config.TELEGRAM_CHAT_ID):
+                        continue
+
+                    if text in ["/admin", "/menu", "admin", "menu", "/start"]:
+                        txt, btn = get_admin_dashboard_markup()
+                        send_telegram_menu(txt, btn)
+
+                    elif text in ["/trades", "trades"]:
+                        txt, btn = get_trades_markup()
+                        send_telegram_menu(txt, btn)
+
+                    elif text in ["/risk", "risk"]:
+                        txt, btn = get_risk_markup()
+                        send_telegram_menu(txt, btn)
+
+                    elif text.startswith("/risk"):
+                        parts = text.split()
+                        if len(parts) > 1:
+                            try:
+                                val = float(parts[1])
+                                if 0.5 <= val <= 10.0:
+                                    state.risk_mode = "PERCENT"
+                                    state.risk_percent = val
+                                    send_telegram_message(f"✅ <b>Risk set to {val}% per trade!</b>")
+                            except ValueError:
+                                pass
+
+                    elif text.startswith("/setlot"):
+                        parts = text.split()
+                        if len(parts) > 1:
+                            try:
+                                val = float(parts[1])
+                                if 0.01 <= val <= 2.0:
+                                    state.risk_mode = "FIXED"
+                                    state.fixed_lot = val
+                                    send_telegram_message(f"✅ <b>Fixed Lot set to {val} Lot!</b>")
+                            except ValueError:
+                                pass
+
+                    elif text in ["/status", "status"]:
+                        txt, btn = get_admin_dashboard_markup()
+                        send_telegram_menu(txt, btn)
                         answer_callback_query(cq_id)
 
                 # 2. Handle Text Commands
@@ -469,7 +576,17 @@ def main():
     print(" 🚀 XAUUSD INSTITUTIONAL AUTO-TRADING BOT (62.7% WIN RATE)")
     print("==============================================================")
 
-    if not mt5.initialize():
+    mt5_login = int(os.getenv("MT5_LOGIN", "0"))
+    mt5_password = os.getenv("MT5_PASSWORD", "")
+    mt5_server = os.getenv("MT5_SERVER", "")
+
+    init_success = False
+    if mt5_login and mt5_password and mt5_server:
+        init_success = mt5.initialize(login=mt5_login, password=mt5_password, server=mt5_server)
+    else:
+        init_success = mt5.initialize()
+
+    if not init_success:
         print(f"[FATAL] MT5 initialization failed: {mt5.last_error()}")
         return
 

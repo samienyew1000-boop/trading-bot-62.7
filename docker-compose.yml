@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  gold_bot:
+    build: .
+    container_name: gold_trading_bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./trades.json:/home/mint/bot/trades.json
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
