@@ -32,6 +32,57 @@ def send_telegram_message(message: str) -> bool:
         print(f"[ERROR] Telegram request failed: {e}")
         return False
 
+def send_telegram_menu(message: str, buttons: list) -> bool:
+    """Send an HTML message with inline buttons."""
+    if not BOT_TOKEN or not CHAT_ID:
+        return False
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML",
+        "reply_markup": {"inline_keyboard": buttons}
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=10)
+        return res.json().get("ok", False)
+    except Exception as e:
+        print(f"[ERROR] Failed to send menu: {e}")
+        return False
+
+def edit_telegram_message(message_id: int, text: str, buttons: list = None) -> bool:
+    """Edit an existing message and its inline buttons."""
+    if not BOT_TOKEN or not CHAT_ID:
+        return False
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/editMessageText"
+    payload = {
+        "chat_id": CHAT_ID,
+        "message_id": message_id,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    if buttons is not None:
+        payload["reply_markup"] = {"inline_keyboard": buttons}
+    try:
+        res = requests.post(url, json=payload, timeout=10)
+        return res.json().get("ok", False)
+    except Exception:
+        return False
+
+def answer_callback_query(query_id: str, text: str = None) -> bool:
+    """Acknowledge Telegram callback query from button clicks."""
+    if not BOT_TOKEN:
+        return False
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerCallbackQuery"
+    payload = {"callback_query_id": query_id}
+    if text:
+        payload["text"] = text
+    try:
+        requests.post(url, json=payload, timeout=5)
+        return True
+    except Exception:
+        return False
+
 def get_telegram_updates(offset=None):
     """Fetch user messages/commands from Telegram."""
     if not BOT_TOKEN:
