@@ -299,6 +299,8 @@ def get_admin_dashboard_markup():
 
     trade_status = "🟢 Active (Auto-Execute)" if state.auto_trade_enabled else "⏸️ Paused (Alerts Only)"
     risk_disp = f"Dynamic {state.risk_percent}%" if state.risk_mode == "PERCENT" else f"Fixed {state.fixed_lot} Lot"
+    bal_str = f"{acc.balance:.2f} USD" if acc else "N/A"
+    eq_str = f"{acc.equity:.2f} USD" if acc else "N/A"
 
     text = (
         f"👑 <b>XAUUSD BOT ADMIN DASHBOARD</b>\n\n"
@@ -307,8 +309,8 @@ def get_admin_dashboard_markup():
         f"🛡 <b>Risk Setting:</b> <code>{risk_disp}</code>\n"
         f"⚡ <b>Auto-Trading:</b> {trade_status}\n"
         f"🎫 <b>Open Position:</b> {pos_str}\n"
-        f"💼 <b>Balance:</b> <code>{acc.balance:.2f} USD</code>\n"
-        f"💎 <b>Equity:</b> <code>{acc.equity:.2f} USD</code>\n\n"
+        f"💼 <b>Balance:</b> <code>{bal_str}</code>\n"
+        f"💎 <b>Equity:</b> <code>{eq_str}</code>\n\n"
         f"<i>ከዚህ በታች ያሉትን ቁልፎች በመጫን ቦቱን መቆጣጠር ይችላሉ፦</i>"
     )
 
@@ -409,17 +411,20 @@ def get_risk_markup():
 def get_account_markup():
     """Build account details page."""
     acc = mt5.account_info()
-    text = (
-        f"💼 <b>MT5 ACCOUNT DETAILS:</b>\n\n"
-        f"👤 <b>Account Login:</b> <code>{acc.login}</code>\n"
-        f"🏢 <b>Server:</b> <code>{acc.server}</code>\n"
-        f"💵 <b>Balance:</b> <code>{acc.balance:.2f} USD</code>\n"
-        f"💎 <b>Equity:</b> <code>{acc.equity:.2f} USD</code>\n"
-        f"🔒 <b>Margin:</b> <code>{acc.margin:.2f} USD</code>\n"
-        f"🆓 <b>Free Margin:</b> <code>{acc.margin_free:.2f} USD</code>\n"
-        f"⚡ <b>Leverage:</b> <code>1:{acc.leverage}</code>\n"
-        f"🛡 <b>Trade Allowed:</b> <code>{acc.trade_allowed}</code>"
-    )
+    if not acc:
+        text = "⚠️ <b>MT5 Account info is currently unavailable. Please try again in a few moments.</b>"
+    else:
+        text = (
+            f"💼 <b>MT5 ACCOUNT DETAILS:</b>\n\n"
+            f"👤 <b>Account Login:</b> <code>{acc.login}</code>\n"
+            f"🏢 <b>Server:</b> <code>{acc.server}</code>\n"
+            f"💵 <b>Balance:</b> <code>{acc.balance:.2f} USD</code>\n"
+            f"💎 <b>Equity:</b> <code>{acc.equity:.2f} USD</code>\n"
+            f"🔒 <b>Margin:</b> <code>{acc.margin:.2f} USD</code>\n"
+            f"🆓 <b>Free Margin:</b> <code>{acc.margin_free:.2f} USD</code>\n"
+            f"⚡ <b>Leverage:</b> <code>1:{acc.leverage}</code>\n"
+            f"🛡 <b>Trade Allowed:</b> <code>{acc.trade_allowed}</code>"
+        )
     buttons = [
         [{"text": "🔙 Back to Admin Menu", "callback_data": "menu_main"}]
     ]
@@ -428,6 +433,14 @@ def get_account_markup():
 def handle_telegram_interactive():
     """Background listener for user commands & inline button clicks."""
     last_id = 0
+    # Discard backlog on startup so we only process new commands
+    try:
+        initial_updates = get_telegram_updates()
+        if initial_updates:
+            last_id = initial_updates[-1].get("update_id", 0)
+    except Exception:
+        pass
+
     while True:
         try:
             updates = get_telegram_updates(offset=last_id + 1)
@@ -493,7 +506,7 @@ def handle_telegram_interactive():
                     if chat_id != str(config.TELEGRAM_CHAT_ID):
                         continue
 
-                    if text in ["/admin", "/menu", "admin", "menu", "/start"]:
+                    if text in ["/admin", "/menu", "admin", "menu", "/start", "/status", "status"]:
                         txt, btn = get_admin_dashboard_markup()
                         send_telegram_menu(txt, btn)
 
@@ -528,47 +541,6 @@ def handle_telegram_interactive():
                                     send_telegram_message(f"✅ <b>Fixed Lot set to {val} Lot!</b>")
                             except ValueError:
                                 pass
-
-                    elif text in ["/status", "status"]:
-                        txt, btn = get_admin_dashboard_markup()
-                        send_telegram_menu(txt, btn)
-                        answer_callback_query(cq_id)
-
-                # 2. Handle Text Commands
-                elif "message" in upd:
-                    msg = upd["message"]
-                    text = msg.get("text", "").strip()
-                    chat_id = str(msg.get("chat", {}).get("id", ""))
-
-                    if chat_id != str(config.TELEGRAM_CHAT_ID):
-                        continue
-
-                    if text in ["/admin", "/menu", "admin", "menu", "/start"]:
-                        txt, btn = get_admin_dashboard_markup()
-                        send_telegram_menu(txt, btn)
-
-                    elif text in ["/trades", "trades"]:
-                        txt, btn = get_trades_markup()
-                        send_telegram_menu(txt, btn)
-
-                    elif text in ["/risk", "risk"]:
-                        txt, btn = get_risk_markup()
-                        send_telegram_menu(txt, btn)
-
-                    elif text.startswith("/setlot"):
-                        parts = text.split()
-                        if len(parts) > 1:
-                            try:
-                                val = float(parts[1])
-                                if 0.01 <= val <= 1.0:
-                                    state.lot_size = val
-                                    send_telegram_message(f"✅ <b>Lot size updated to {val} Lot!</b>")
-                            except ValueError:
-                                pass
-
-                    elif text in ["/status", "status"]:
-                        txt, btn = get_admin_dashboard_markup()
-                        send_telegram_menu(txt, btn)
 
         except Exception as e:
             print(f"[ERROR] Telegram handler error: {e}")

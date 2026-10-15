@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   gold_bot:
-    build: .
+    image: gold_trading_bot:latest
     container_name: gold_trading_bot
     restart: always
     env_file:
@@ -15,9 +15,15 @@ services:
       - ./ucrtbase.dll:/home/mint/.wine/drive_c/windows/system32/ucrtbase.dll
       - ./vcruntime140.dll:/home/mint/.wine/drive_c/windows/system32/vcruntime140.dll
       - ./vcruntime140_1.dll:/home/mint/.wine/drive_c/windows/system32/vcruntime140_1.dll
+      - ./bot.py:/home/mint/bot/bot.py
+      - ./telegram_notifier.py:/home/mint/bot/telegram_notifier.py
+      - ./trade_logger.py:/home/mint/bot/trade_logger.py
+      - ./chart_generator.py:/home/mint/bot/chart_generator.py
+      - ./config.py:/home/mint/bot/config.py
       - ./trades.json:/home/mint/bot/trades.json
       - ./.env:/home/mint/bot/.env
     deploy:
       resources:
         limits:
           memory: 1536M
+
