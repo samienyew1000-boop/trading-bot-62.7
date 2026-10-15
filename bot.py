@@ -38,6 +38,7 @@ class GoldBotState:
         self.risk_percent = 1.0     # 1.0%, 2.0%, 3.0%, 5.0%
         self.fixed_lot = 0.01       # 0.01, 0.02, 0.05
         self.auto_trade_enabled = True
+        self.last_log_time = 0
 
 state = GoldBotState()
 
@@ -198,10 +199,6 @@ def analyze_and_trade():
     closed_candle = df.iloc[-2]
     prior_candle = df.iloc[-3]
     latest_candle = df.iloc[-1]
-
-    if state.last_candle_time == closed_candle['time']:
-        return
-
     candle_hour = closed_candle['time_dt'].hour
     is_active_session = (config.SESSION_START_UTC <= candle_hour <= config.SESSION_END_UTC)
     atr = closed_candle['atr']
@@ -212,6 +209,20 @@ def analyze_and_trade():
         state.current_trend = "BEARISH (DOWNTREND)"
     else:
         state.current_trend = "RANGING / CHOP"
+
+    now = time.time()
+    if now - state.last_log_time >= 60:
+        state.last_log_time = now
+        tick = mt5.symbol_info_tick(config.SYMBOL)
+        p = tick.bid if tick else closed_candle['close']
+        sess_str = "ACTIVE (London/NY)" if is_active_session else "OUTSIDE SESSION"
+        trade_str = "ACTIVE" if state.auto_trade_enabled else "PAUSED"
+        acc_info = mt5.account_info()
+        eq_val = acc_info.equity if acc_info else 0.0
+        print(f"[SCAN {datetime.now().strftime('%H:%M:%S')}] {config.SYMBOL}: {p:.2f} | Trend: {state.current_trend} | Session: {sess_str} | Bot: {trade_str} | Equity: {eq_val:.2f}$")
+
+    if state.last_candle_time == closed_candle['time']:
+        return
 
     if not is_active_session:
         return
@@ -578,6 +589,11 @@ def main():
     print(f"[INFO] Connected to MT5 Account: {acc.login} ({acc.server})")
     print(f"[INFO] Balance: {acc.balance} USD | Equity: {acc.equity} USD")
     print(f"[INFO] Terminal Trade Allowed (Algo Trading): {term.trade_allowed}")
+
+    if not mt5.symbol_select(config.SYMBOL, True):
+        print(f"[WARNING] Could not select {config.SYMBOL} in Market Watch: {mt5.last_error()}")
+    else:
+        print(f"[INFO] Successfully selected {config.SYMBOL} in Market Watch.")
 
     # Start Telegram Listener Thread
     cmd_thread = threading.Thread(target=handle_telegram_interactive, daemon=True)
