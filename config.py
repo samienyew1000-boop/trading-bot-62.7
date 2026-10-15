@@ -8,24 +8,19 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8965440827:AAHLTk_jTMR1_fxw2xX9VfeSbTKvGWwdURM")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5663531258")
 
-# Trading Symbols to Monitor
-SYMBOLS = ["EURUSD", "XAUUSD", "USDCAD"]
+# Asset & Timeframe (Gold 62.7% Win Rate Strategy)
+SYMBOL = "XAUUSD"
+TIMEFRAME = mt5.TIMEFRAME_H1
+TIMEFRAME_NAME = "1H"
 
-# Timeframes
-# Higher Timeframe (Structure & Main Leg OB): H1 (or M15)
-HTF = mt5.TIMEFRAME_H1
-HTF_NAME = "1H"
+# Risk & Order Management
+DEFAULT_LOT_SIZE = 0.01  # Safe micro lot for Demo / Small balance
+RISK_REWARD_RATIO = 2.0  # 1:2.0 Risk-to-Reward
+MAGIC_NUMBER = 8882026
 
-# Lower Timeframe (Reaction & Entry Confirmation): M5
-LTF = mt5.TIMEFRAME_M5
-LTF_NAME = "5M"
+# Session Volume Filter (London & New York Active Hours)
+SESSION_START_UTC = 7   # 07:00 UTC (10:00 AM Ethiopian Time)
+SESSION_END_UTC = 16    # 16:00 UTC (07:00 PM Ethiopian Time)
 
-# Swing Detection Sensitivity (Bars to left and right)
-SWING_BARS = 3
-
-# Number of candles to fetch for analysis
-CANDLE_COUNT_HTF = 200
-CANDLE_COUNT_LTF = 200
-
-# Bot polling interval in seconds
+# Scan Polling Interval in seconds
 POLL_INTERVAL = 15

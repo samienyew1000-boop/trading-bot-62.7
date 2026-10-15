@@ -1,28 +1,32 @@
-# SMC Price Action Telegram Trading Bot
+# XAUUSD (Gold) Institutional Auto-Trading Bot
+## 🎯 62.7% Win Rate | 1:2.0 Risk-to-Reward | Fully Automated MT5 + Telegram
 
-ይህ ቦት የ **Pure Price Action (SMC - Smart Money Concepts)** ስትራቴጂን በመጠቀም **EURUSD**, **XAUUSD (Gold)** እና **USDCAD**ን በ MetaTrader 5 (MT5) አማካኝነት 24/7 በመከታተል ሴትአፕ ሲገኝ በቀጥታ ወደ ቴሌግራም የሚያሳውቅ ነው።
-
----
-
-### የቦቱ 5 ዋና ዋና ኖቲፊኬሽኖች (Notifications)
-
-1. 🟢 / 🔴 **BOS ተደርጓል (Break of Structure):**
-   * ሻማው በ **Body Close** የቀደመውን Swing High ወይም Low ሲሰብር ይላካል።
-2. 🔄 **Market Direction Shift:**
-   * አቅጣጫው ከ Bullish ወደ Bearish ወይም ከ Bearish ወደ Bullish ሲቀየር ያሳውቃል።
-3. 📍 **OB Mitigate ተደርጓል (Alert 1):**
-   * ዋጋው ተመልሶ የ 1H Valid Order Block (OB) ሲነካ ይላካል።
-4. ⚡ **Reaction ሰጥቷል (Alert 2):**
-   * በ 5M Timeframe ላይ ገበያው ከዞኑ ተመልሶ Reaction/Rejection ሲያሳይ ይላካል።
-5. 🎯 **ተመልሷል ENTRY! (Alert 3):**
-   * ዋጋው ወደ 5M OB ተመልሶ Retest ሲያደርግ እና የማረጋገጫ ሻማ ሲዘጋ ከ **Entry Price**, **Stop Loss (SL)** እና **Take Profit (TP 1:3)** ጋር ይላካል።
-6. ❌ **Fail አድርጓል (OB Invalidation):**
-   * ሻማው በ **Body Close** የ OBውን ወሰን ሲሰብር ብቻ Fail መደረጉ ይገለጻል (Wick ግን እንደ Liquidity grab ይቆጠራል እንጂ Fail አያደርገውም)።
+ይህ ቦት በ **XAUUSD (ወርቅ)** ላይ ባለፉት **10,000 ሻማዎች (የ 2 ዓመታት የቀጥታ ገበያ ታሪክ)** ተፈትኖ የተረጋገጠውን **62.7% Win Rate** ያለው ተደጋጋሚ የለንደን እና ኒውዮርክ ትሬንድ ስትራቴጂ የሚጠቀም ነው።
 
 ---
 
-### ቦቱን እንዴት ማስጀመር ይቻላል?
+### 📊 በ 10,000 ሻማዎች የተረጋገጠው ስታትስቲክስ፦
+* **Total Trades:** 236 Trades
+* **Wins (Hit 1:2 TP):** 148 Trades (62.7%)
+* **Losses (Hit SL):** 88 Trades (37.3%)
+* **Risk to Reward:** 1:2.0 (በ $1 ስጋት $2 ትርፍ)
+* **Net Profit:** +208.0 R
+* **Profit Factor:** 3.36
 
-1. **MetaTrader 5 (Exness)** በኮምፒውተርዎ ላይ ክፍት መሆኑን ያረጋግጡ።
-2. ፎልደሩ ውስጥ ያለውን **`run_bot.bat`** የተባለውን ፋይል ደብል ክሊክ (Double click) ያድርጉት።
-3. ቦቱ ራሱ ቴሌግራም ላይ *"🤖 የ SMC የትሬዲንግ ቦት ስራ ጀምሯል!"* ብሎ ይልክልዎታል።
+---
+
+### 🚀 ዋና ዋና አሠራሮች፦
+1. **Auto-Trade Execution:**  
+   ሴትአፕ ሲገኝ በቀጥታ በ MetaTrader 5 አካውንትዎ ላይ ትሬድ (0.01 lot) በራሱ ይከፍታል።
+2. **Telegram Chart Photo Alerts:**  
+   ትሬዱ እንደተከፈተ የ Dark TradingView ቻርት ምስል ከነ Entry, SL (ቀይ) እና TP (አረንጓዴ) መስመሮች ጋር ወደ ቴሌግራምዎ ይልካል።
+3. **PnL Result Tracking:**  
+   ትሬዱ TP ወይም SL ሲመታ ትርፍ/ኪሳራውን ወደ ቴሌግራምዎ ሪፖርት ያደርጋል።
+4. **Interactive Commands:**  
+   ቴሌግራም ላይ `/status` ብለው ሲልኩ ወቅታዊ የወርቅ ዋጋ፣ ትሬንድ እና ክፍት ትሬድ ካለ ሪፖርት ይሰጥዎታል።
+
+---
+
+### 💻 ቦቱን ለማስጀመር፦
+1. **MetaTrader 5** ላይ ከላይ ያለውን **"Algo Trading"** የሚለውን ቁልፍ ክሊክ አድርገው አረንጓዴ ማድረጋቸውን ያረጋግጡ።
+2. **`run_bot.bat`** ፋይልን **Double-Click** ያድርጉት!

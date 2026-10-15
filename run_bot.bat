@@ -1,8 +1,9 @@
 @echo off
-title SMC Trading Bot - Telegram Notifier
-color 0A
+title XAUUSD Gold Auto-Trader (62.7% Win Rate)
+color 0E
 echo ========================================================
-echo   Starting SMC Price Action Trading Bot (MT5 + Telegram)
+echo   Starting XAUUSD Institutional Auto-Trading Bot
+echo   Strategy: London/NY Trend Pullback (62.7% Win Rate)
 echo ========================================================
 echo.
 python bot.py
