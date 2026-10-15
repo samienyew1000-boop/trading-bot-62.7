@@ -587,6 +587,8 @@ def main():
     init_kwargs = {}
     if mt5_path:
         init_kwargs["path"] = mt5_path
+        init_kwargs["portable"] = True
+        init_kwargs["timeout"] = 60000
     if mt5_login and mt5_password and mt5_server:
         init_kwargs["login"] = mt5_login
         init_kwargs["password"] = mt5_password

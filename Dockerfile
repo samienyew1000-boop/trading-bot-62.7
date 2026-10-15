@@ -23,5 +23,5 @@ RUN WINEDEBUG=-all wine /home/mint/.wine/drive_c/py312/python.exe -m pip install
     pillow \
     python-dotenv
 
-# Run the 62.7% Gold Strategy Bot inside Wine with virtual display
-CMD ["bash", "-c", "WINEDEBUG=-all xvfb-run -a wine /home/mint/.wine/drive_c/py312/python.exe bot.py"]
+# Start virtual display & run the 62.7% Gold Strategy Bot inside Wine
+CMD ["bash", "-c", "Xvfb :99 -screen 0 1024x768x16 & export DISPLAY=:99 && sleep 1 && WINEDEBUG=-all wine /home/mint/.wine/drive_c/py312/python.exe bot.py"]

@@ -7,8 +7,14 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      - WINEDLLOVERRIDES=ucrtbase,vcruntime140,vcruntime140_1=n,b
     volumes:
       - ./terminal64.exe:/home/mint/.wine/drive_c/Program Files/MetaTrader 5/terminal64.exe
+      - ./mt5_config:/home/mint/.wine/drive_c/Program Files/MetaTrader 5/Config
+      - ./ucrtbase.dll:/home/mint/.wine/drive_c/windows/system32/ucrtbase.dll
+      - ./vcruntime140.dll:/home/mint/.wine/drive_c/windows/system32/vcruntime140.dll
+      - ./vcruntime140_1.dll:/home/mint/.wine/drive_c/windows/system32/vcruntime140_1.dll
       - ./trades.json:/home/mint/bot/trades.json
       - ./.env:/home/mint/bot/.env
     deploy:
