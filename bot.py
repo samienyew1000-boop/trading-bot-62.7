@@ -4,6 +4,9 @@ import os
 import time
 import threading
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
@@ -579,12 +582,17 @@ def main():
     mt5_login = int(os.getenv("MT5_LOGIN", "0"))
     mt5_password = os.getenv("MT5_PASSWORD", "")
     mt5_server = os.getenv("MT5_SERVER", "")
+    mt5_path = os.getenv("MT5_PATH", "")
 
-    init_success = False
+    init_kwargs = {}
+    if mt5_path:
+        init_kwargs["path"] = mt5_path
     if mt5_login and mt5_password and mt5_server:
-        init_success = mt5.initialize(login=mt5_login, password=mt5_password, server=mt5_server)
-    else:
-        init_success = mt5.initialize()
+        init_kwargs["login"] = mt5_login
+        init_kwargs["password"] = mt5_password
+        init_kwargs["server"] = mt5_server
+
+    init_success = mt5.initialize(**init_kwargs) if init_kwargs else mt5.initialize()
 
     if not init_success:
         print(f"[FATAL] MT5 initialization failed: {mt5.last_error()}")

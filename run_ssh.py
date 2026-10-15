@@ -13,7 +13,10 @@ def execute_remote(cmd: str):
     return out, err
 
 if __name__ == "__main__":
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "uname -a"
+    if len(sys.argv) > 1:
+        cmd = " ".join(sys.argv[1:])
+    else:
+        cmd = "uname -a"
     out, err = execute_remote(cmd)
     if out:
         print(out)

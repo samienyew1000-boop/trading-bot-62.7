@@ -8,8 +8,10 @@ services:
     env_file:
       - .env
     volumes:
+      - ./terminal64.exe:/home/mint/.wine/drive_c/Program Files/MetaTrader 5/terminal64.exe
       - ./trades.json:/home/mint/bot/trades.json
+      - ./.env:/home/mint/bot/.env
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 1536M
