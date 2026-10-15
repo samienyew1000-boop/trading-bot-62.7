@@ -1,3 +1,5 @@
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 import time
 import threading
 import MetaTrader5 as mt5
