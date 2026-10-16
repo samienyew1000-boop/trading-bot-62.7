@@ -12,6 +12,7 @@ import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
 import config
+from news_filter import NewsShield
 from chart_generator import generate_candlestick_chart
 from telegram_notifier import (
     send_telegram_message,
@@ -26,6 +27,9 @@ from trade_logger import (
     record_trade_exit,
     get_performance_summary
 )
+
+# Initialize Dual-Layer News & Volatility Shield
+news_shield = NewsShield(pre_mins=30, post_mins=30, shock_mult=2.5)
 
 class GoldBotState:
     def __init__(self):
@@ -227,6 +231,22 @@ def analyze_and_trade():
     if not is_active_session:
         return
 
+    # Check Dual-Layer News & Volatility Shield
+    sym_info = mt5.symbol_info(config.SYMBOL)
+    spread_cash = (sym_info.spread * sym_info.point) if sym_info else 0.17
+    candle_range = closed_candle['high'] - closed_candle['low']
+
+    is_safe, shield_msg = news_shield.is_safe_to_trade(symbol=config.SYMBOL, candle_range=candle_range, atr=atr, spread_cash=spread_cash)
+    if not is_safe:
+        if news_shield.should_send_alert(shield_msg):
+            print(f"[NEWS SHIELD ACTIVE] Gold entry paused: {shield_msg}")
+            send_telegram_message(
+                f"🛡 <b>[NEWS SHIELD ACTIVE] Gold Trade Paused!</b>\n\n"
+                f"⚠️ <b>Trigger:</b> <code>{shield_msg}</code>\n"
+                f"🛑 <b>Protection:</b> Pausing new entries for 30m to protect against volatility spikes."
+            )
+        return
+
     # 3. BULLISH SETUP (BUY)
     if state.current_trend == "BULLISH (UPTREND)":
         if prior_candle['low'] <= prior_candle['ema20'] and closed_candle['close'] > prior_candle['high'] and closed_candle['close'] > closed_candle['open']:
@@ -314,11 +334,15 @@ def get_admin_dashboard_markup():
     bal_str = f"{acc.balance:.2f} USD" if acc else "N/A"
     eq_str = f"{acc.equity:.2f} USD" if acc else "N/A"
 
+    is_safe, shield_msg = news_shield.is_safe_to_trade()
+    shield_disp = "🟢 Clear (Safe)" if is_safe else f"🛑 <b>PAUSED:</b> {shield_msg}"
+
     text = (
         f"👑 <b>XAUUSD BOT ADMIN DASHBOARD</b>\n\n"
         f"💵 <b>Current Gold Price:</b> <code>{curr_p:.3f}</code>\n"
         f"📈 <b>1H Trend:</b> <b>{state.current_trend}</b>\n"
-        f"🛡 <b>Risk Setting:</b> <code>{risk_disp}</code>\n"
+        f"🛡 <b>News & Shock Shield:</b> {shield_disp}\n"
+        f"⚖️ <b>Risk Setting:</b> <code>{risk_disp}</code>\n"
         f"⚡ <b>Auto-Trading:</b> {trade_status}\n"
         f"🎫 <b>Open Position:</b> {pos_str}\n"
         f"💼 <b>Balance:</b> <code>{bal_str}</code>\n"
